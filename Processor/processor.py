@@ -53,21 +53,38 @@ class Processor:
             operand1 = int(operand1)
             if operand2 is not None:
                 operand2 = int(operand2)
+            print(f"Executing {opcode} with operands {operand1}, {operand2}")
+
             if opcode == 'MOV':
                 self.registers[operand1] = operand2
+                print(f"MOV: Register[{operand1}] = {operand2}")
+                print(f"MOV: Stack Pointer at {self.stack_pointer}")
+
             elif opcode == 'ADD':
                 result = self.registers[operand1] + self.registers[operand2]
                 self.registers[operand1] = result & 0xFFFF
                 self.set_flag('Z', 1 if result == 0 else 0)
+                print(f"ADD: Register[{operand1}] = {self.registers[operand1]}, Zero flag set to {self.get_flag('Z')}")
+                print(f"ADD: Stack Pointer at {self.stack_pointer}")
+
             elif opcode == 'PUSH':
                 self.push(operand1)
+                print(f"PUSH: Stack Pointer at {self.stack_pointer}")
+
             elif opcode == 'POP':
                 self.pop(operand1)
+                print(f"POP: Register[{operand1}] = {self.registers[operand1]}, Stack Pointer at {self.stack_pointer}")
+
             elif opcode == 'CALL':
                 self.call(operand1)  # Directly use operand1 as address
+                print(f"CALL: Jump to address {operand1}, Stack Pointer at {self.stack_pointer}")
+
             elif opcode == 'RET':
                 self.ret()
+                print(f"RET: Return to address at Program Counter {self.program_counter}")
+
             # Extend with other operations as needed
+
         except IndexError as e:
             print(f"Error: {e} - Instruction {opcode} with operands {operand1}, {operand2}")
 
