@@ -12,6 +12,7 @@ class Processor:
         self.memory = memory
         self.keyboard_input = 0
         self.registers = [0] * 8
+        self.flags = {'Z': 0, 'C': 0, 'N': 0, 'V': 0}
         self.file_path = 'instructions.txt'
         self.instruction_set = {
             'READ': 1,
@@ -22,8 +23,30 @@ class Processor:
             'INC': 6,
             'DEC': 7,
         }
-
         self.read_flag = False
+
+    def compare(self, reg1, reg2):
+        # Assume reg1 and reg2 are register indices
+        value1 = self.registers[reg1]
+        value2 = self.registers[reg2]
+        self.flags['Z'] = 1 if value1 == value2 else 0
+        self.flags['C'] = 1 if value1 < value2 else 0
+        self.flags['N'] = 1 if (value1 - value2) < 0 else 0
+
+    def update_flags(self, value):
+        self.flags['Z'] = 1 if value == 0 else 0
+        self.flags['N'] = 1 if value < 0 else 0
+        self.flags['C'] = 0  # Typically determined by the context of arithmetic
+
+    def update_arithmetic_flags(self, result, value1, value2, operation='add'):
+        self.update_flags(result)
+        max_int = 0xFFFF
+        if operation == 'add':
+            self.flags['V'] = 1 if (value1 > 0 and value2 > 0 and result < 0) or (value1 < 0 and value2 < 0 and result > 0) else 0
+            self.flags['C'] = 1 if value1 + value2 > max_int else 0
+        elif operation == 'sub':
+            self.flags['V'] = 1 if (value1 > 0 and value2 < 0 and result < 0) or (value1 < 0 and value2 > 0 and result > 0) else 0
+            self.flags['C'] = 1 if value1 < value2 else 0
 
     def read_from_keyboard(self):
         buffer_content = self.memory.read_data_memory(KEYBOARD_ADDRESS)
@@ -34,7 +57,6 @@ class Processor:
                 print('modified input register:', self.keyboard_input)
             else:
                 self.read_flag = True
-
         print(self.read_flag)
 
     def get_input(self):
@@ -44,20 +66,17 @@ class Processor:
         digits = [digit for digit in str(result)]
         print("digits:", digits)
         screen_address_index = SCREEN_ADDRESS
-
         for digit in digits:
             print('screen address index:', screen_address_index)
             self.memory.write_data_memory(screen_address_index, ord(digit))
             print(self.memory.read_data_memory(screen_address_index))
             screen_address_index += 2
-
-        print('data memory: ', self.memory.data_memory)
+        print('Data Memory: ', self.memory.data_memory)
 
     def load_instructions(self):
         with open(self.file_path, 'r') as file:
             instructions = []
             for line_number, line in enumerate(file, start=1):
-                # Split the line into components, remove commas, and strip whitespace
                 parts = line.strip().replace(',', '').split()
                 parts[0] = self.instruction_set[parts[0]]
                 instructions.append(parts)
@@ -67,71 +86,73 @@ class Processor:
 
     def execute_instruction(self, opcode, operand1=None, operand2=None):
         try:
-            if operand1 is not None:
-                operand1 = int(operand1)
-            if operand2 is not None:
-                operand2 = int(operand2)
+            operand1 = int(operand1) if operand1 is not None else None
+            operand2 = int(operand2) if operand2 is not None else None
             print(f"Executing {opcode} with operands {operand1}, {operand2}")
 
             if opcode == 1:
                 while not self.read_flag:
                     time.sleep(0.1)
-
                 next_available = self.memory.next_in_data_memory()
                 self.memory.write_data_memory(next_available, self.get_input())
                 self.registers[operand1] = next_available
-
                 self.read_flag = False
                 self.keyboard_input = 0
 
             elif opcode == 2:
-                result = self.memory.read_data_memory(self.registers[operand1]) \
-                         + self.memory.read_data_memory(self.registers[operand2])
+                result = self.memory.read_data_memory(self.registers[operand1]) + self.memory.read_data_memory(self.registers[operand2])
                 next_available = self.memory.next_in_data_memory()
                 self.memory.write_data_memory(next_available, result)
                 self.registers[operand2 + 1] = next_available
+                self.compare(operand1, operand2)
+                self.update_arithmetic_flags(result, self.memory.read_data_memory(self.registers[operand1]), self.memory.read_data_memory(self.registers[operand2]), 'add')
                 self.display_on_screen(result)
 
             elif opcode == 3:
-                result = self.memory.read_data_memory(self.registers[operand1]) \
-                         - self.memory.read_data_memory(self.registers[operand2])
+                result = self.memory.read_data_memory(self.registers[operand1]) - self.memory.read_data_memory(self.registers[operand2])
                 next_available = self.memory.next_in_data_memory()
                 self.memory.write_data_memory(next_available, result)
                 self.registers[operand2 + 1] = next_available
+                self.compare(operand1, operand2)
+                self.update_arithmetic_flags(result, self.memory.read_data_memory(self.registers[operand1]), self.memory.read_data_memory(self.registers[operand2]), 'sub')
                 self.display_on_screen(result)
 
             elif opcode == 4:
-                result = self.memory.read_data_memory(self.registers[operand1]) \
-                         * self.memory.read_data_memory(self.registers[operand2])
+                result = self.memory.read_data_memory(self.registers[operand1]) * self.memory.read_data_memory(self.registers[operand2])
                 next_available = self.memory.next_in_data_memory()
                 self.memory.write_data_memory(next_available, result)
                 self.registers[operand2 + 1] = next_available
+                self.compare(operand1, operand2)
+                self.update_flags(result)
                 self.display_on_screen(result)
 
             elif opcode == 5:
-                # TODO : in memory, make the print also work for float numbers
                 if self.memory.read_data_memory(self.registers[operand2]) != 0:
-                    result = self.memory.read_data_memory(self.registers[operand1]) \
-                             // self.memory.read_data_memory(self.registers[operand2])
+                    result = self.memory.read_data_memory(self.registers[operand1]) // self.memory.read_data_memory(self.registers[operand2])
                 else:
                     raise ZeroDivisionError("Attempt to divide by zero.")
                 next_available = self.memory.next_in_data_memory()
                 self.memory.write_data_memory(next_available, result)
                 self.registers[operand2 + 1] = next_available
+                self.compare(operand1, operand2)
+                self.update_flags(result)
                 self.display_on_screen(result)
 
             elif opcode == 6:
                 result = self.memory.read_data_memory(self.registers[operand1]) + 1
                 self.memory.write_data_memory(self.registers[operand1], result)
+                self.update_flags(result)
                 self.display_on_screen(result)
 
             elif opcode == 7:
                 result = self.memory.read_data_memory(self.registers[operand1]) - 1
                 self.memory.write_data_memory(self.registers[operand1], result)
+                self.update_flags(result)
                 self.display_on_screen(result)
 
-            print('data memory: ', self.memory.data_memory)
+            print('Data Memory: ', self.memory.data_memory)
             print("Registers:", self.registers)
+            print("Flags:", self.flags)
 
         except IndexError as e:
             print(f"Error: {e} - Instruction {opcode} with operands {operand1}, {operand2}")
