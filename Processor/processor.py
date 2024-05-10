@@ -12,6 +12,8 @@ class Processor:
         self.memory = memory
         self.keyboard_input = 0
         self.registers = [0] * 8
+        self.program_counter = 0  # Needed for program flow
+        self.stack_pointer = 0xFFFE  # Initialize with a high value, assuming 16-bit address space
         self.flags = {'Z': 0, 'C': 0, 'N': 0, 'V': 0}
         self.file_path = 'instructions.txt'
         self.instruction_set = {
@@ -22,6 +24,13 @@ class Processor:
             'DIV': 5,
             'INC': 6,
             'DEC': 7,
+            'JMP': 8,
+            'JZ': 9,
+            'JNZ': 10,
+            'CALL': 11,
+            'RET': 12,
+            'PUSH': 13,
+            'POP': 14
         }
         self.read_flag = False
 
@@ -38,15 +47,38 @@ class Processor:
         self.flags['N'] = 1 if value < 0 else 0
         self.flags['C'] = 0  # Typically determined by the context of arithmetic
 
-    def update_arithmetic_flags(self, result, value1, value2, operation='add'):
+    def update_arithmetic_flags(self, result, value1, value2, operation='ADD'):
         self.update_flags(result)
         max_int = 0xFFFF
-        if operation == 'add':
+        if operation == 'ADD':
             self.flags['V'] = 1 if (value1 > 0 and value2 > 0 and result < 0) or (value1 < 0 and value2 < 0 and result > 0) else 0
             self.flags['C'] = 1 if value1 + value2 > max_int else 0
-        elif operation == 'sub':
+        elif operation == 'SUB':
             self.flags['V'] = 1 if (value1 > 0 and value2 < 0 and result < 0) or (value1 < 0 and value2 > 0 and result > 0) else 0
             self.flags['C'] = 1 if value1 < value2 else 0
+
+    def push(self, value):
+        self.stack_pointer -= 2
+        self.memory.write_data_memory(self.stack_pointer, value)
+
+    def pop(self):
+        value = self.memory.read_data_memory(self.stack_pointer)
+        self.stack_pointer += 2
+        return value
+
+    def jump(self, address):
+        self.program_counter = address
+
+    def conditional_jump(self, condition):
+        if condition:
+            self.program_counter = self.memory.read_data_memory(self.program_counter + 1)
+
+    def call(self, address):
+        self.push(self.program_counter + 2)  # Assumes CALL instruction is 2 bytes long
+        self.program_counter = address
+
+    def ret(self):
+        self.program_counter = self.pop()
 
     def read_from_keyboard(self):
         buffer_content = self.memory.read_data_memory(KEYBOARD_ADDRESS)
@@ -105,7 +137,7 @@ class Processor:
                 self.memory.write_data_memory(next_available, result)
                 self.registers[operand2 + 1] = next_available
                 self.compare(operand1, operand2)
-                self.update_arithmetic_flags(result, self.memory.read_data_memory(self.registers[operand1]), self.memory.read_data_memory(self.registers[operand2]), 'add')
+                self.update_arithmetic_flags(result, self.memory.read_data_memory(self.registers[operand1]), self.memory.read_data_memory(self.registers[operand2]), 'ADD')
                 self.display_on_screen(result)
 
             elif opcode == 3:
@@ -114,7 +146,7 @@ class Processor:
                 self.memory.write_data_memory(next_available, result)
                 self.registers[operand2 + 1] = next_available
                 self.compare(operand1, operand2)
-                self.update_arithmetic_flags(result, self.memory.read_data_memory(self.registers[operand1]), self.memory.read_data_memory(self.registers[operand2]), 'sub')
+                self.update_arithmetic_flags(result, self.memory.read_data_memory(self.registers[operand1]), self.memory.read_data_memory(self.registers[operand2]), 'SUB')
                 self.display_on_screen(result)
 
             elif opcode == 4:
@@ -149,6 +181,29 @@ class Processor:
                 self.memory.write_data_memory(self.registers[operand1], result)
                 self.update_flags(result)
                 self.display_on_screen(result)
+
+            elif opcode == 8:
+                self.jump(operand1)
+
+            elif opcode == 9:
+                if self.flags['Z'] == 1:
+                    self.jump(operand1)
+
+            elif opcode == 10:
+                if self.flags['Z'] == 0:
+                    self.jump(operand1)
+
+            elif opcode == 11:
+                self.call(operand1)
+
+            elif opcode == 12:
+                self.ret()
+
+            elif opcode == 13:
+                self.push(self.registers[operand1])
+
+            elif opcode == 14:
+                self.registers[operand1] = self.pop()
 
             print('Data Memory: ', self.memory.data_memory)
             print("Registers:", self.registers)
