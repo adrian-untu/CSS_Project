@@ -1,114 +1,178 @@
+import tkinter as tk
+from CONFIG import *
+import time
+import threading
 from Memory.memory import Memory
+from UI.screen import Screen
+from UI.keyboard import Keyboard
 
 
 class Processor:
-    def __init__(self):
-        # Initialize 8 data registers
+    def __init__(self, memory):
+        self.memory = memory
+        self.keyboard_input = 0
         self.registers = [0] * 8
-        # Special-purpose registers
-        self.program_counter = 0
-        self.stack_pointer = 0xFFFF  # Example stack pointer initialization
-        # Flags
-        self.flags = {
-            'Z': 0,  # Zero flag
-            'C': 0,  # Carry flag
-            'N': 0,  # Negative flag
-            'V': 0   # Overflow flag
-        }
-        self.memory = Memory()
         self.file_path = 'instructions.txt'
+        self.instruction_set = {
+            'READ': 1,
+            'ADD': 2,
+            'SUB': 3,
+            'MUL': 4,
+            'DIV': 5,
+            'INC': 6,
+            'DEC': 7,
+        }
 
-    def set_flag(self, flag, value):
-        self.flags[flag] = value
+        self.read_flag = False
 
-    def get_flag(self, flag):
-        return self.flags[flag]
+    def read_from_keyboard(self):
+        buffer_content = self.memory.read_data_memory(KEYBOARD_ADDRESS)
+        if buffer_content:
+            print('buffer content:', buffer_content)
+            if buffer_content != 13:
+                self.keyboard_input = self.keyboard_input * 10 + int(chr(buffer_content))
+                print('modified input register:', self.keyboard_input)
+            else:
+                self.read_flag = True
 
-    def push(self, register_index):
-        # Ensure register_index is an integer
-        register_index = int(register_index)
-        # Decrement stack pointer by 2 for 16-bit width data
-        self.stack_pointer -= 2
-        # Write the register's value to the stack
-        self.memory.write(self.stack_pointer, self.registers[register_index])
+        print(self.read_flag)
 
-    def pop(self, register_index):
-        # Read the value from the stack into the register
-        self.registers[register_index] = self.memory.read(self.stack_pointer)
-        # Increment stack pointer by 2 for 16-bit width data
-        self.stack_pointer += 2
+    def get_input(self):
+        return self.keyboard_input
 
-    def call(self, address):
-        # Push the next instruction address onto the stack (program counter + 1 for simplicity)
-        self.push(self.program_counter + 1)
-        # Set program counter to the new address (function address)
-        self.program_counter = address
+    def display_on_screen(self, result):
+        digits = [digit for digit in str(result)]
+        print("digits:", digits)
+        screen_address_index = SCREEN_ADDRESS
 
-    def ret(self):
-        # Pop the return address off the stack into the program counter
-        self.pop('PC')  # Adjust if PC is not handled like a normal register
+        for digit in digits:
+            print('screen address index:', screen_address_index)
+            self.memory.write_data_memory(screen_address_index, ord(digit))
+            print(self.memory.read_data_memory(screen_address_index))
+            screen_address_index += 2
 
-    def execute_instruction(self, opcode, operand1, operand2=None):
-        try:
-            operand1 = int(operand1)
-            if operand2 is not None:
-                operand2 = int(operand2)
-            print(f"Executing {opcode} with operands {operand1}, {operand2}")
-
-            if opcode == 'MOV':
-                self.registers[operand1] = operand2
-                print(f"MOV: Register[{operand1}] = {operand2}")
-                print(f"MOV: Stack Pointer at {self.stack_pointer}")
-
-            elif opcode == 'ADD':
-                result = self.registers[operand1] + self.registers[operand2]
-                self.registers[operand1] = result & 0xFFFF
-                self.set_flag('Z', 1 if result == 0 else 0)
-                print(f"ADD: Register[{operand1}] = {self.registers[operand1]}, Zero flag set to {self.get_flag('Z')}")
-                print(f"ADD: Stack Pointer at {self.stack_pointer}")
-
-            elif opcode == 'PUSH':
-                self.push(operand1)
-                print(f"PUSH: Stack Pointer at {self.stack_pointer}")
-
-            elif opcode == 'POP':
-                self.pop(operand1)
-                print(f"POP: Register[{operand1}] = {self.registers[operand1]}, Stack Pointer at {self.stack_pointer}")
-
-            elif opcode == 'CALL':
-                self.call(operand1)  # Directly use operand1 as address
-                print(f"CALL: Jump to address {operand1}, Stack Pointer at {self.stack_pointer}")
-
-            elif opcode == 'RET':
-                self.ret()
-                print(f"RET: Return to address at Program Counter {self.program_counter}")
-
-            # Extend with other operations as needed
-
-        except IndexError as e:
-            print(f"Error: {e} - Instruction {opcode} with operands {operand1}, {operand2}")
+        print('data memory: ', self.memory.data_memory)
 
     def load_instructions(self):
         with open(self.file_path, 'r') as file:
             instructions = []
-            for line in file:
+            for line_number, line in enumerate(file, start=1):
                 # Split the line into components, remove commas, and strip whitespace
                 parts = line.strip().replace(',', '').split()
+                parts[0] = self.instruction_set[parts[0]]
                 instructions.append(parts)
+                self.memory.write_instruction_memory(line_number, parts[0])
+        print('instruction memory: ', self.memory.instruction_memory)
         return instructions
 
+    def execute_instruction(self, opcode, operand1=None, operand2=None):
+        try:
+            if operand1 is not None:
+                operand1 = int(operand1)
+            if operand2 is not None:
+                operand2 = int(operand2)
+            print(f"Executing {opcode} with operands {operand1}, {operand2}")
 
-def main():
-    cpu = Processor()
-    instructions = cpu.load_instructions()
+            if opcode == 1:
+                while not self.read_flag:
+                    time.sleep(0.1)
+
+                next_available = self.memory.next_in_data_memory()
+                self.memory.write_data_memory(next_available, self.get_input())
+                self.registers[operand1] = next_available
+
+                self.read_flag = False
+                self.keyboard_input = 0
+
+            elif opcode == 2:
+                result = self.memory.read_data_memory(self.registers[operand1]) \
+                         + self.memory.read_data_memory(self.registers[operand2])
+                next_available = self.memory.next_in_data_memory()
+                self.memory.write_data_memory(next_available, result)
+                self.registers[operand2 + 1] = next_available
+                self.display_on_screen(result)
+
+            elif opcode == 3:
+                result = self.memory.read_data_memory(self.registers[operand1]) \
+                         - self.memory.read_data_memory(self.registers[operand2])
+                next_available = self.memory.next_in_data_memory()
+                self.memory.write_data_memory(next_available, result)
+                self.registers[operand2 + 1] = next_available
+                self.display_on_screen(result)
+
+            elif opcode == 4:
+                result = self.memory.read_data_memory(self.registers[operand1]) \
+                         * self.memory.read_data_memory(self.registers[operand2])
+                next_available = self.memory.next_in_data_memory()
+                self.memory.write_data_memory(next_available, result)
+                self.registers[operand2 + 1] = next_available
+                self.display_on_screen(result)
+
+            elif opcode == 5:
+                # TODO : in memory, make the print also work for float numbers
+                if self.memory.read_data_memory(self.registers[operand2]) != 0:
+                    result = self.memory.read_data_memory(self.registers[operand1]) \
+                             // self.memory.read_data_memory(self.registers[operand2])
+                else:
+                    raise ZeroDivisionError("Attempt to divide by zero.")
+                next_available = self.memory.next_in_data_memory()
+                self.memory.write_data_memory(next_available, result)
+                self.registers[operand2 + 1] = next_available
+                self.display_on_screen(result)
+
+            elif opcode == 6:
+                result = self.memory.read_data_memory(self.registers[operand1]) + 1
+                self.memory.write_data_memory(self.registers[operand1], result)
+                self.display_on_screen(result)
+
+            elif opcode == 7:
+                result = self.memory.read_data_memory(self.registers[operand1]) - 1
+                self.memory.write_data_memory(self.registers[operand1], result)
+                self.display_on_screen(result)
+
+            print('data memory: ', self.memory.data_memory)
+            print("Registers:", self.registers)
+
+        except IndexError as e:
+            print(f"Error: {e} - Instruction {opcode} with operands {operand1}, {operand2}")
+
+
+def run_interface():
+    root = tk.Tk()
+
+    screen = Screen(processor, master=root, width=SCREEN_WIDTH, height=SCREEN_HEIGHT)
+    keyboard = Keyboard(processor, screen, master=root)
+
+    keyboard.pack(side="left")
+    screen.pack(side="right")
+
+    root.mainloop()
+
+
+def run_processor():
+    instructions = processor.load_instructions()
+
     for inst in instructions:
         try:
             if len(inst) == 3:
-                cpu.execute_instruction(inst[0], int(inst[1]), int(inst[2]))
+                processor.execute_instruction(inst[0], int(inst[1]), int(inst[2]))
             elif len(inst) == 2:
-                cpu.execute_instruction(inst[0], int(inst[1]))
+                processor.execute_instruction(inst[0], int(inst[1]))
+            elif len(inst) == 1:
+                processor.execute_instruction(inst[0])
         except ValueError as e:
             print(f"Error processing instruction {inst}: {e}")
 
+
 if __name__ == '__main__':
-    main()
+    memory = Memory(instruction_size=INSTRUCTION_MEMORY_SIZE, data_size=DATA_MEMORY_SIZE)
+    processor = Processor(memory)
+
+    interface_thread = threading.Thread(target=run_interface)
+    processor_thread = threading.Thread(target=run_processor)
+
+    interface_thread.start()
+    processor_thread.start()
+
+    interface_thread.join()
+    processor_thread.join()

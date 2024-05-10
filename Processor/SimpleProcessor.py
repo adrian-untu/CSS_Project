@@ -1,18 +1,4 @@
-class Memory:
-    def __init__(self, size=65536):  # Default to max size
-        self.memory = [0] * size
-
-    def read(self, address):
-        high = self.memory[address]
-        low = self.memory[address + 1]
-        return (high << 8) | low
-
-    def write(self, address, value):
-        high = (value >> 8) & 0xFF
-        low = value & 0xFF
-        self.memory[address] = high
-        self.memory[address + 1] = low
-
+from Memory.memory import Memory
 
 class SimpleProcessor:
     def __init__(self):
