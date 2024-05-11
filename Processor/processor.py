@@ -21,6 +21,12 @@ class Processor:
             'DIV': 5,
             'INC': 6,
             'DEC': 7,
+            'AND': 8,
+            'OR': 9,
+            'XOR': 10,
+            'SHL': 11,
+            'SHR': 12,
+
         }
 
         self.read_flag = False
@@ -129,6 +135,53 @@ class Processor:
                 result = self.memory.read_data_memory(self.registers[operand1]) - 1
                 self.memory.write_data_memory(self.registers[operand1], result)
                 self.display_on_screen(result)
+
+            elif opcode == 8:
+                result = (self.memory.read_data_memory(self.registers[operand1]) \
+                          & self.memory.read_data_memory(self.registers[operand2])) \
+                         // self.memory.read_data_memory(self.registers[operand1])
+                next_available = self.memory.next_in_data_memory()
+                self.memory.write_data_memory(next_available, result)
+                self.registers[operand2 + 1] = next_available
+                self.display_on_screen(result)
+
+            elif opcode == 9:
+                result = (self.memory.read_data_memory(self.registers[operand1]) \
+                          | self.memory.read_data_memory(self.registers[operand2]))
+
+                next_available = self.memory.next_in_data_memory()
+                self.memory.write_data_memory(next_available, result)
+                self.registers[operand2 + 1] = next_available
+                self.display_on_screen(result)
+
+            elif opcode == 10:
+                result = (self.memory.read_data_memory(self.registers[operand1]) \
+                          ^ self.memory.read_data_memory(self.registers[operand2]))
+
+                next_available = self.memory.next_in_data_memory()
+                self.memory.write_data_memory(next_available, result)
+                self.registers[operand2 + 1] = next_available
+                self.display_on_screen(result)
+
+            elif opcode == 11:
+                result = (self.memory.read_data_memory(self.registers[operand1]) \
+                          << self.memory.read_data_memory(self.registers[operand2])) & 0xFFFF
+
+                next_available = self.memory.next_in_data_memory()
+                self.memory.write_data_memory(next_available, result)
+                self.registers[operand2 + 1] = next_available
+                self.display_on_screen(result)
+
+            elif opcode == 12:
+                result = (self.memory.read_data_memory(self.registers[operand1]) \
+                          >> self.memory.read_data_memory(self.registers[operand2])) & 0xFFFF
+
+                next_available = self.memory.next_in_data_memory()
+                self.memory.write_data_memory(next_available, result)
+                self.registers[operand2 + 1] = next_available
+                self.display_on_screen(result)
+
+
 
             print('data memory: ', self.memory.data_memory)
             print("Registers:", self.registers)
