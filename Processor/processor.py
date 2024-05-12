@@ -30,7 +30,12 @@ class Processor:
             'CALL': 11,
             'RET': 12,
             'PUSH': 13,
-            'POP': 14
+            'POP': 14,
+            'AND': 15,
+            'OR': 16,
+            'XOR': 17,
+            'SHL': 18,
+            'SHR': 19
         }
         self.read_flag = False
 
@@ -204,6 +209,51 @@ class Processor:
 
             elif opcode == 14:
                 self.registers[operand1] = self.pop()
+
+            elif opcode == 15:
+                result = (self.memory.read_data_memory(self.registers[operand1]) \
+                          & self.memory.read_data_memory(self.registers[operand2])) \
+                         // self.memory.read_data_memory(self.registers[operand1])
+                next_available = self.memory.next_in_data_memory()
+                self.memory.write_data_memory(next_available, result)
+                self.registers[operand2 + 1] = next_available
+                self.display_on_screen(result)
+
+            elif opcode == 16:
+                result = (self.memory.read_data_memory(self.registers[operand1]) \
+                          | self.memory.read_data_memory(self.registers[operand2]))
+
+                next_available = self.memory.next_in_data_memory()
+                self.memory.write_data_memory(next_available, result)
+                self.registers[operand2 + 1] = next_available
+                self.display_on_screen(result)
+
+            elif opcode == 17:
+                result = (self.memory.read_data_memory(self.registers[operand1]) \
+                          ^ self.memory.read_data_memory(self.registers[operand2]))
+
+                next_available = self.memory.next_in_data_memory()
+                self.memory.write_data_memory(next_available, result)
+                self.registers[operand2 + 1] = next_available
+                self.display_on_screen(result)
+
+            elif opcode == 18:
+                result = (self.memory.read_data_memory(self.registers[operand1]) \
+                          << self.memory.read_data_memory(self.registers[operand2])) & 0xFFFF
+
+                next_available = self.memory.next_in_data_memory()
+                self.memory.write_data_memory(next_available, result)
+                self.registers[operand2 + 1] = next_available
+                self.display_on_screen(result)
+
+            elif opcode == 19:
+                result = (self.memory.read_data_memory(self.registers[operand1]) \
+                          >> self.memory.read_data_memory(self.registers[operand2])) & 0xFFFF
+
+                next_available = self.memory.next_in_data_memory()
+                self.memory.write_data_memory(next_available, result)
+                self.registers[operand2 + 1] = next_available
+                self.display_on_screen(result)
 
             print('Data Memory: ', self.memory.data_memory)
             print("Registers:", self.registers)
