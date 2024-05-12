@@ -1,6 +1,7 @@
 import tkinter as tk
 from Processor.CONFIG import *
 
+
 class Keyboard(tk.Frame):
     def __init__(self, processor, screen, master=None):
         super().__init__(master)
@@ -13,11 +14,10 @@ class Keyboard(tk.Frame):
         char = event.char
         if char:
             self.processor.memory.write_data_memory(KEYBOARD_ADDRESS, ord(char))
-            print('data memory: ', self.processor.memory.data_memory)
             self.processor.read_from_keyboard()
             if char == '\r':
                 self.entry.delete(0, tk.END)  # Clear entry field
-            self.screen.update_screen_integer()
+                # self.screen.update_screen_integer()
 
     def create_widgets(self):
         self.entry.pack()

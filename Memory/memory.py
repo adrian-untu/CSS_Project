@@ -1,4 +1,6 @@
 from Processor.CONFIG import *
+
+
 class Memory:
     def __init__(self, instruction_size=1024, data_size=1024):
         self.instruction_memory = [''] * instruction_size
@@ -11,7 +13,7 @@ class Memory:
         return -1
 
     def read_data_memory(self, address):
-        if 0 <= address < len(self.data_memory) - 1:
+        if 0 <= address < len(self.data_memory) - 1 and self.data_memory[address] != '':
             if address % 2 == 0:
                 msb = int(self.data_memory[address], 2)
                 lsb = int(self.data_memory[address + 1], 2)
@@ -24,6 +26,8 @@ class Memory:
             raise ValueError("Memory address out of bounds")
 
     def write_data_memory(self, address, value):
+        if value == '':
+            return
         if 0 <= value < 2 ** 16:
             msb = (value >> 8) & 0xFF
             lsb = value & 0xFF
@@ -45,6 +49,8 @@ class Memory:
             raise ValueError("Value doesn't fit within 16 bits")
 
     def read_instruction_memory(self, address):
+        if self.instruction_memory[address] == '':
+            return
         if 0 <= address < len(self.instruction_memory) - 1:
             msb = int(self.instruction_memory[address], 2)
             return msb
@@ -66,6 +72,5 @@ class Memory:
             print("Invalid value:", value)
             raise ValueError("Value doesn't fit within 8 bits")
 
-    def clear_data_memory(self):
-        self.data_memory = [''] * len(self.data_memory)
-
+    def clear_data_memory(self, idx):
+        self.data_memory[idx] = ''
