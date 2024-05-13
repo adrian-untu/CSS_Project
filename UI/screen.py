@@ -1,5 +1,5 @@
 import tkinter as tk
-from Processor.CONFIG import *
+from Processor.CONFIG import SCREEN_ADDRESS, END_SCREEN_ADDRESS
 
 
 class Screen(tk.Frame):

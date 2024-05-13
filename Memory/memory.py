@@ -1,4 +1,4 @@
-from Processor.CONFIG import *
+from Processor.CONFIG import DATA_MEMORY_START_ADDRESS, DATA_MEMORY_SIZE
 
 
 class Memory:

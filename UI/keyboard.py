@@ -1,5 +1,5 @@
 import tkinter as tk
-from Processor.CONFIG import *
+from Processor.CONFIG import KEYBOARD_ADDRESS
 
 
 class Keyboard(tk.Frame):

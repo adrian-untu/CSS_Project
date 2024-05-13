@@ -1,5 +1,5 @@
 import tkinter as tk
-from CONFIG import *
+from CONFIG import STACK_ADDRESS, KEYBOARD_ADDRESS, SCREEN_ADDRESS, END_SCREEN_ADDRESS, SCREEN_WIDTH, SCREEN_HEIGHT, INSTRUCTION_MEMORY_SIZE, DATA_MEMORY_SIZE
 import time
 import threading
 from Memory.memory import Memory
@@ -177,10 +177,8 @@ class Processor:
             elif opcode == 2:
                 result = self.memory.read_data_memory(self.registers[operand1]) + self.memory.read_data_memory(
                     self.registers[operand2])
-                # next_available = self.memory.next_in_data_memory()
                 next_available = operand1
                 self.memory.write_data_memory(next_available, result)
-                # self.registers[operand2 + 1] = next_available
                 self.compare(operand1, operand2)
                 self.update_arithmetic_flags(result, self.memory.read_data_memory(self.registers[operand1]),
                                              self.memory.read_data_memory(self.registers[operand2]), 'ADD')
@@ -189,10 +187,8 @@ class Processor:
             elif opcode == 3:
                 result = self.memory.read_data_memory(self.registers[operand1]) - self.memory.read_data_memory(
                     self.registers[operand2])
-                # next_available = self.memory.next_in_data_memory()
                 next_available = operand1
                 self.memory.write_data_memory(next_available, result)
-                # self.registers[operand2 + 1] = next_available
                 self.compare(operand1, operand2)
                 self.update_arithmetic_flags(result, self.memory.read_data_memory(self.registers[operand1]),
                                              self.memory.read_data_memory(self.registers[operand2]), 'SUB')
@@ -201,10 +197,8 @@ class Processor:
             elif opcode == 4:
                 result = self.memory.read_data_memory(self.registers[operand1]) * self.memory.read_data_memory(
                     self.registers[operand2])
-                # next_available = self.memory.next_in_data_memory()
                 next_available = operand1
                 self.memory.write_data_memory(next_available, result)
-                # self.registers[operand2 + 1] = next_available
                 self.compare(operand1, operand2)
                 self.update_flags(result)
                 self.display_on_screen(result)
@@ -215,10 +209,8 @@ class Processor:
                         self.registers[operand2])
                 else:
                     raise ZeroDivisionError("Attempt to divide by zero.")
-                # next_available = self.memory.next_in_data_memory()
                 next_available = operand1
                 self.memory.write_data_memory(next_available, result)
-                # self.registers[operand2 + 1] = next_available
                 self.compare(operand1, operand2)
                 self.update_flags(result)
                 self.display_on_screen(result)
@@ -263,50 +255,40 @@ class Processor:
                 result = (self.memory.read_data_memory(self.registers[operand1]) \
                           & self.memory.read_data_memory(self.registers[operand2])) \
                          // self.memory.read_data_memory(self.registers[operand1])
-                # next_available = self.memory.next_in_data_memory()
                 next_available = operand1
                 self.memory.write_data_memory(next_available, result)
-                # self.registers[operand2 + 1] = next_available
                 self.display_on_screen(result)
 
             elif opcode == 16:
                 result = (self.memory.read_data_memory(self.registers[operand1]) \
                           | self.memory.read_data_memory(self.registers[operand2]))
 
-                # next_available = self.memory.next_in_data_memory()
                 next_available = operand1
                 self.memory.write_data_memory(next_available, result)
-                # self.registers[operand2 + 1] = next_available
                 self.display_on_screen(result)
 
             elif opcode == 17:
                 result = (self.memory.read_data_memory(self.registers[operand1]) \
                           ^ self.memory.read_data_memory(self.registers[operand2]))
 
-                # next_available = self.memory.next_in_data_memory()
                 next_available = operand1
                 self.memory.write_data_memory(next_available, result)
-                # self.registers[operand2 + 1] = next_available
                 self.display_on_screen(result)
 
             elif opcode == 18:
                 result = (self.memory.read_data_memory(self.registers[operand1]) \
                           << self.memory.read_data_memory(self.registers[operand2])) & 0xFFFF
 
-                # next_available = self.memory.next_in_data_memory()
                 next_available = operand1
                 self.memory.write_data_memory(next_available, result)
-                # self.registers[operand2 + 1] = next_available
                 self.display_on_screen(result)
 
             elif opcode == 19:
                 result = (self.memory.read_data_memory(self.registers[operand1]) \
                           >> self.memory.read_data_memory(self.registers[operand2])) & 0xFFFF
 
-                # next_available = self.memory.next_in_data_memory()
                 next_available = operand1
                 self.memory.write_data_memory(next_available, result)
-                # self.registers[operand2 + 1] = next_available
                 self.display_on_screen(result)
 
             print('Data Memory:', self.memory.data_memory)
