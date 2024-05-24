@@ -1,5 +1,5 @@
 import tkinter as tk
-from CONFIG import STACK_ADDRESS, KEYBOARD_ADDRESS, SCREEN_ADDRESS, END_SCREEN_ADDRESS, SCREEN_WIDTH, SCREEN_HEIGHT, INSTRUCTION_MEMORY_SIZE, DATA_MEMORY_SIZE
+from Processor.CONFIG import STACK_ADDRESS, KEYBOARD_ADDRESS, SCREEN_ADDRESS, END_SCREEN_ADDRESS, SCREEN_WIDTH, SCREEN_HEIGHT, INSTRUCTION_MEMORY_SIZE, DATA_MEMORY_SIZE
 import time
 import threading
 from Memory.memory import Memory
@@ -173,6 +173,7 @@ class Processor:
                 self.registers[operand1] = next_available
                 self.read_flag = False
                 self.keyboard_input = 0
+                return 1
 
             elif opcode == 2:
                 result = self.memory.read_data_memory(self.registers[operand1]) + self.memory.read_data_memory(
@@ -294,6 +295,7 @@ class Processor:
             print('Data Memory:', self.memory.data_memory)
             print("Registers:", self.registers)
             print("Flags:", self.flags)
+            return result
 
         except IndexError as e:
             print(
