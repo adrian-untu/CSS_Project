@@ -43,14 +43,24 @@ class Processor:
         self.call_active = False
 
     def compare(self, reg1, reg2):
-        # Assume reg1 and reg2 are register indices
+        assert 0 <= reg1 < len(self.registers), "Invalid register index reg1"
+        assert 0 <= reg2 < len(self.registers), "Invalid register index reg2"
         value1 = self.registers[reg1]
         value2 = self.registers[reg2]
         self.flags['Z'] = 1 if value1 == value2 else 0
         self.flags['C'] = 1 if value1 < value2 else 0
         self.flags['N'] = 1 if (value1 - value2) < 0 else 0
 
+        # Invariants
+        assert isinstance(self.flags['Z'], int) and (
+                    self.flags['Z'] == 0 or self.flags['Z'] == 1), "Flag Z must be binary"
+        assert isinstance(self.flags['C'], int) and (
+                    self.flags['C'] == 0 or self.flags['C'] == 1), "Flag C must be binary"
+        assert isinstance(self.flags['N'], int) and (
+                    self.flags['N'] == 0 or self.flags['N'] == 1), "Flag N must be binary"
+
     def update_flags(self, value):
+        assert isinstance(value, int), "Invalid value type in registers"
         self.flags['Z'] = 1 if value == 0 else 0
         self.flags['N'] = 1 if value < 0 else 0
         self.flags['C'] = 0  # Typically determined by the context of arithmetic
@@ -67,33 +77,46 @@ class Processor:
                         value1 < 0 and value2 > 0 and result > 0) else 0
             self.flags['C'] = 1 if value1 < value2 else 0
 
+        # Invariants
+        assert self.flags['V'] in [0, 1], "Overflow flag must be binary"
+        assert self.flags['C'] in [0, 1], "Carry flag must be binary"
+
     def push(self, value):
+        assert self.stack_pointer < STACK_ADDRESS + DATA_MEMORY_SIZE, "Stack overflow"
         self.stack_pointer += 2
         self.memory.write_data_memory(self.stack_pointer, value)
 
     def pop(self):
+        assert self.stack_pointer >= STACK_ADDRESS, "Stack underflow"
         value = self.memory.read_data_memory(self.stack_pointer)
         self.memory.clear_data_memory(self.stack_pointer)
         self.stack_pointer -= 2
         return value
 
     def jump(self, address):
+        assert 0 <= address < INSTRUCTION_MEMORY_SIZE, "Jump address out of range"
         self.program_counter = address
 
     def conditional_jump(self, condition):
+        assert isinstance(condition, bool), "Condition must be a boolean"
         if condition:
-            self.program_counter = self.memory.read_data_memory(self.program_counter + 1)
+            new_address = self.memory.read_data_memory(self.program_counter + 1)
+            assert 0 <= new_address < INSTRUCTION_MEMORY_SIZE, "Conditional jump address out of range"
+            self.program_counter = new_address
 
     def call(self, address):
+        assert 0 <= address < INSTRUCTION_MEMORY_SIZE, "Call address out of range"
         self.push(self.program_counter)
         self.program_counter = address
 
     def ret(self):
+        assert self.stack_pointer >= STACK_ADDRESS, "Stack underflow on return"
         self.program_counter = self.pop()
         self.call_active = False
 
     def read_from_keyboard(self):
         buffer_content = self.memory.read_data_memory(KEYBOARD_ADDRESS)
+        assert buffer_content is not None, "Keyboard buffer is empty"
         if buffer_content:
             if buffer_content != 13:
                 self.keyboard_input = self.keyboard_input * 10 + int(chr(buffer_content))
@@ -102,6 +125,7 @@ class Processor:
                 self.read_flag = True
 
     def get_input(self):
+        assert self.read_flag is True, "No valid input to read"
         return self.keyboard_input
 
     def display_on_screen(self, result):
@@ -116,6 +140,12 @@ class Processor:
         if self.screen_update_callback:
             self.screen_update_callback()  # Call the callback function for screen update
             time.sleep(0.7)
+
+        # Postcondition check
+        screen_address_index = SCREEN_ADDRESS
+        for digit in digits:
+            assert self.memory.read_data_memory(screen_address_index) == ord(digit), "Screen display error"
+            screen_address_index += 2
 
     def load_instructions(self):
         with open(self.file_path, 'r') as file:
@@ -146,14 +176,17 @@ class Processor:
                     self.executed_procedures.add(self.program_counter)
 
                 # else:
+                result = 0
                 if len(inst) == 3:
-                    processor.execute_instruction(inst_code, int(inst[1]), int(inst[2]))
+                    result = processor.execute_instruction(inst_code, int(inst[1]), int(inst[2]))
                 elif len(inst) == 2:
-                    processor.execute_instruction(inst_code, int(inst[1]))
+                    result = processor.execute_instruction(inst_code, int(inst[1]))
                 elif len(inst) == 1:
-                    processor.execute_instruction(inst_code)
+                    result = processor.execute_instruction(inst_code)
                 if inst[0] not in [8, 11]:
                     self.program_counter += 1
+
+                print(result)
 
             except ValueError as e:
                 print(f"Error processing instruction {inst}: {e}")
@@ -230,23 +263,29 @@ class Processor:
 
             elif opcode == 8:
                 self.jump(operand1)
+                result = 0
 
             elif opcode == 9:
                 if self.flags['Z'] == 1:
                     self.jump(operand1)
+                result = 0
 
             elif opcode == 10:
                 if self.flags['Z'] == 0:
                     self.jump(operand1)
+                result = 0
 
             elif opcode == 11:
                 self.call(operand1)
+                result = 0
 
             elif opcode == 12:
                 self.ret()
+                result = 0
 
             elif opcode == 13:
                 self.push(self.registers[operand1])
+                result = 0
 
             elif opcode == 14:
                 result = self.pop()
